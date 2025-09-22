@@ -4,6 +4,29 @@
  * 
 */
 
+// Missing UTF8 U+001B
+#define T_RESET     "[0m"  // Reset
+#define T_YELLOW    "[93m" // FG yelow
+#define T_RED       "[91m" // FG red
+#define T_GREEN     "[92m" // FG green
+#define T_CYAN      "[96m" // FG cyan
+
+// Decorate
+#define WRAP( x, y )  ( ( ( y ) + ( x ) + (T_RESET) ) )
+// C: WRAP( "ABC  ", T_RED ) -> "[91mABC  [0m"
+
+// Fixme:
+// Currently if multiple codes is supplied, they will stack as following:
+// "[1m[2m[3m[4m[5m[6m"
+//   1  2  3  4  5  6
+// Full function would allow parameters and would look result as:
+// "[1;2;3;4;5;6m"
+//   1
+// OR
+// "[1;2m[3;4m[5;6m"
+//   1    2    3
+
+
 /**
   * Check if <string> str contains ANSI escape codes.
   * Returns <int> 0 if false, 1 if true.
