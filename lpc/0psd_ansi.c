@@ -4,16 +4,21 @@
  * 
 */
 
-// Missing UTF8 U+001B
+// ESC "\u001b"
+// [ "\u005b"
 #define T_RESET     "[0m"  // Reset
-#define T_YELLOW    "[93m" // FG yelow
 #define T_RED       "[91m" // FG red
 #define T_GREEN     "[92m" // FG green
+#define T_YELLOW    "[93m" // FG yelow
 #define T_CYAN      "[96m" // FG cyan
+// 38;5;<n>m;
+// 38;2;<r>;<g>;<b>m
+
 
 // Decorate
 #define WRAP( x, y )  ( ( ( y ) + ( x ) + (T_RESET) ) )
 // C: WRAP( "ABC  ", T_RED ) -> "[91mABC  [0m"
+
 
 // Fixme:
 // Currently if multiple codes is supplied, they will stack as following:
