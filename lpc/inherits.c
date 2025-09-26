@@ -3,9 +3,28 @@
 // TODO
 // brain not working
 // * Use ? for list of local valid id's
-// * INHLIST_FLAT | INHLIST_TREE | INHLIST_TAG_VIRTUAL
+// * INHLIST_FLAT(0) | INHLIST_TREE(1) | INHLIST_TAG_VIRTUAL(2)
+
+/* INHLIST_TREE
+   The result is an array starting the with the filename of ob itself, followed
+   by the all directly inherited objects. If one of the inherited objects has no
+   inherits by itself, then its name will be stored directly in the array.
+   If one inherited object has inherits by itself, a subvector will be created
+   and stored in the result vector. The subvector(s) have the same structure as
+   the main result vector.
+
+   INHLIST_TAG_VIRTUAL
+   All names in the result are prefixed with a tag: ” ” (two spaces) for
+   normal inherits, “v ” for virtual inherits.
+*/
 
 /* Display modes
+
+// "\u2500" "─"
+// "\u2514" "└"
+// "\u251c" "├"
+// "\u2502" "│"
+
 Box drawing         Simple
 
 [Item 1]            [Item 1]
