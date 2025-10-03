@@ -1,116 +1,127 @@
-// 2025-09-26 Created
+// 2025-09-26 Z Created
+// 2025-10-02 Z Works somewhat
 
-// TODO
-// brain not working
-// * Use ? for list of local valid id's
-// * INHLIST_FLAT(0) | INHLIST_TREE(1) | INHLIST_TAG_VIRTUAL(2)
+#include <inherit_list.h>
 
-/* INHLIST_TREE
-   The result is an array starting the with the filename of ob itself, followed
-   by the all directly inherited objects. If one of the inherited objects has no
-   inherits by itself, then its name will be stored directly in the array.
-   If one inherited object has inherits by itself, a subvector will be created
-   and stored in the result vector. The subvector(s) have the same structure as
-   the main result vector.
+// Bitmask used to solve
+#define ITEM_STR 0x01   // Type string
+#define ITEM_ARR 0x02   // Type array
+#define ITEM_ROT 0x04   // Item root
+#define ITEM_FST 0x08   // Item first
+#define ITEM_LST 0x10   // Item last
 
-   INHLIST_TAG_VIRTUAL
-   All names in the result are prefixed with a tag: ” ” (two spaces) for
-   normal inherits, “v ” for virtual inherits.
-*/
-
-/* Display modes
+int iCount = 0;
 
 // "\u2500" "─"
 // "\u2514" "└"
 // "\u251c" "├"
 // "\u2502" "│"
 
-Box drawing         Simple
-
-[Item 1]            [Item 1]
-└──[Item 2]         +---[Item 2]
-   ├──[Item 3]          +---[Item 3]
-   │  └──[Item 4]       |   +--[Item 4]
-   │     ├──[Item 5]    |      +---[Item 5]
-   │     └──[Item 6]    |      +---[Item 6]
-   └──[Item 7]          +---[Item 7]
-*/
-
-#include <inherit_list.h>
-
-// Fixme
-void print_indent( )
-{
-}
-
-/*
-  case:direct_inherit ({"0.0",({"1.0","1.1","1.2","1.3"}) })
-  [0.0]
-  ├──[1.0]
-  ├──[1.1]
-  ├──[1.2]
-  └──[1.3]
-*/
-
-// Fixme
-void print_tree( mixed *data, int depth )
+void new_tree( mixed *data, int level, string PreIndent = "", string PostIndent = "" )
 {
    // Data present?
   if( !data || sizeof( data ) == 0 )
     return;
 
-   // Total number of items at current depth
+   string indent = "";
    int total_items = sizeof( data );
-
-   // Fixme
    for( int i = 0; i < total_items; i++ )
    {
+      int iFlags = 0x00;
+        
+      // First item at depth?
+      int is_first_item = ( i == 0 );
+      if( is_first_item )
+         iFlags = ( iFlags | ITEM_FST );
+        
+      // Last item at depth?
+      int is_last_item = ( i == total_items - 1 );
+      if( is_last_item )
+         iFlags = ( iFlags | ITEM_LST );
+            
+      // Next last item at depth?
+      int is_next_last_item = ( ( i + 1 ) >= ( total_items - 1 ) );
+        
+      // Absolute first?
+      int is_root_item = ( ( i == 0 ) && ( level == 0 ) );
+      if( is_root_item )
+         iFlags = ( iFlags | ITEM_ROT );
+        
+      if( pointerp( data[i] ) )
+         iFlags = ( iFlags | ITEM_ARR );
+        
       if( stringp( data[i] ) )
+         iFlags = ( iFlags | ITEM_STR );
+        
+      if( iFlags & ITEM_STR ) // If string
       {
-         // Is item
+         if( iFlags & ITEM_ROT )
+               write( "[" + data[i] + "]\n" );
+         else
+         {
+            // First && Last
+            if( ( iFlags & ITEM_FST ) && ( iFlags & ITEM_LST ) )
+               write( PreIndent+"└──"+"[ERR" + data[i] + "]\n" );
+               // First && !Last
+            if( ( iFlags & ITEM_FST ) && !( iFlags & ITEM_LST ) )
+            {
+               if( level > 1 )
+                  write( PreIndent+"[" + data[i] + "]\n" );
+               else
+                  write( PreIndent+"└──"+"[" + data[i] + "]\n" );
+            }
+            // !First && Last
+            if( !( iFlags & ITEM_FST ) && ( iFlags & ITEM_LST ) ) // Last 1 indent
+               write( PostIndent+"└──"+"[" + data[i] + "]\n" );
+            // !First && !Last
+            if( !(iFlags & ITEM_FST) && !(iFlags & ITEM_LST) ) // !Last && !First 1 indent
+               write( PostIndent+"├──"+"[" + data[i] + "]\n" );
+            }
+        }
+        else if( iFlags & ITEM_ARR ) // If array
+        {
+            // First && !Last
+            if( (iFlags & ITEM_FST) && !(iFlags & ITEM_LST) )
+                new_tree( data[i], (level+1), PreIndent+"ERR", PostIndent+"ERR" );
+            // First && Last
+            if( (iFlags & ITEM_FST) && (iFlags & ITEM_LST) )
+                new_tree( data[i], (level+1), PreIndent+"ERR", PostIndent+"ERR" );
+            // !First && Last
+            if( !(iFlags & ITEM_FST) && (iFlags & ITEM_LST) )
+                new_tree( data[i], (level+1), PreIndent, PostIndent+"   " ); //overhang
+            // !First && !Last
+            if( !(iFlags & ITEM_FST) && !(iFlags & ITEM_LST) )
+                new_tree( data[i], (level+1), PostIndent+"├──", PostIndent+"│  " ); // under │  
       }
-      else if( pointerp( data[i] ) )
-      {
-         // Is array, recursion
-         print_tree( data[i], depth + 1 );
-      }
-      else
-      {
-         // Should not be here
-      }
+      iCount++;
    }
 }
 
 execute( str )
 {
-  // No arg?
-  if( !str )
-  {
-    write( "Usage: inherits ?|<object>\n" );
-    return 1;
-  }
+   if( !str )
+   {
+      write( "Usage: inherits ?|<object>\n" );
+      return 1;
+   }
 
-  // Check if object is present?
-  object *obs;
-  object ob;
-  obs = all_inventory( environment( this_player() ) );
-  for( int i = 0; i < sizeof( obs ); i++ )
-  {
-    if( obs[i]->query_id() == str )
-      ob = obs[i];
-  }
+   object *obs;
+   object ob;
+   obs = all_inventory( environment( this_player() ) );
+   for( int i = 0; i < sizeof( obs ); i++ )
+   {
+      if( obs[i]->query_id() == str )
+         ob = obs[i];
+   }
 
-  // Object not found.
-  if( !ob )
-  {
-    write( "Object \"" + str + "\" not found.\n" );
-    return 1;
-  }
+   if( !ob )
+   {
+      write( "Object \"" + str + "\" not found.\n" );
+      return 1;
+   }
 
-  // Get inherits of object
-  mixed *data = inherit_list( ob, INHLIST_TREE | INHLIST_TAG_VIRTUAL );
-
-  print_tree( data, 0 );
+   mixed *data = inherit_list( ob, INHLIST_TREE | INHLIST_TAG_VIRTUAL );
+   new_tree( data, 0 );
   
-  return 1;
+   return 1;
 }
